@@ -5,10 +5,10 @@
 Сахно Виктория
 Музоваткина Вероника
 ## Компиляция и запуск
-'''
-mkdir build
-cd build
+
+​```bash
+mkdir build && cd build
 cmake ..
-make 
+make
 ./orbitsim
-'''
+​```
