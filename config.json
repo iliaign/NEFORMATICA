@@ -1,0 +1,15 @@
+{
+    "dt": 120,
+    "total_days": 1460,
+    "save_interval_hours": 24,
+    "output_file": "simulation.csv",
+    "output_dir": "data/",
+    "trajectories_file": "trajectories.csv",
+    "impact_stats_file": "impact_stats.csv",
+    "remove_mars": false,
+    "remove_jupiter": false,
+    "remove_venus": false,
+    "num_asteroids": 100,
+    "asteroid_speed_min": 20000,
+    "asteroid_speed_max": 40000
+}
