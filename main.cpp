@@ -3,7 +3,7 @@
 #include "graphics/menu.cpp"
 
 // Объявляем функцию визуализации (определена в visualization.cpp)
-void show_trajectories(const std::string& filename);
+void runVisualization(const std::string& trajectoryFile);
 
 int main() {
     // 1. Загружаем конфиг
@@ -24,8 +24,8 @@ int main() {
     engine.save_all_results();
 
     // 4. Визуализация после симуляции
-    std::string traj_file = cfg.output_dir() + "/" + cfg.trajectories_file();
-    show_trajectories(traj_file);
+    std::string trajFile =  cfg.output_dir() +"/" + cfg.trajectories_file();
+    runVisualization(trajFile);   
 
     return 0;
 }

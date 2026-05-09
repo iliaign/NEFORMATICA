@@ -1,95 +1,122 @@
-//Вероник, это твой минимально измененный файл
-
 #include <SFML/Graphics.hpp>
-#include <fstream>
-#include <sstream>
 #include <vector>
 #include <map>
+#include <fstream>
 #include <iostream>
 #include <cmath>
+#include <string>
 
-void show_trajectories(const std::string& filename = "trajectories.csv") {
-    std::map<int, std::vector<std::pair<double, double>>> tracks;
+struct Point { double x, y; };
+
+void runVisualization(const std::string& trajectoryFile)
+{
+    // 1. Загружаем данные из CSV
+    std::map<int, std::vector<Point>> tracks;
     std::vector<double> times;
-    std::ifstream file(filename);
-    if (!file) {
-        std::cerr << "Error: " << filename << " not found.\n";
+    
+    std::ifstream file(trajectoryFile);
+    if (!file.is_open())
+    {
+        std::cerr << "Ошибка: не удалось открыть " << trajectoryFile << std::endl;
         return;
     }
-    std::string line;
-    std::getline(file, line); // header
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        double t, x, y;
-        int id;
-        char comma;
-        ss >> t >> comma >> id >> comma >> x >> comma >> y;
-        if (times.empty() || times.back() != t) times.push_back(t);
+    
+    std::string header;
+    std::getline(file, header); // "time,id,x,y"
+    
+    double t, x, y;
+    int id;
+    char comma;
+    while (file >> t >> comma >> id >> comma >> x >> comma >> y)
+    {
+        if (times.empty() || times.back() != t)
+            times.push_back(t);
         tracks[id].push_back({x, y});
     }
     file.close();
-
-    if (times.empty()) {
-        std::cerr << "No data in " << filename << "\n";
+    
+    if (tracks.empty() || times.empty())
+    {
+        std::cerr << "Нет данных в файле" << std::endl;
         return;
     }
-
-    size_t max_frames = times.size();
-
-    sf::RenderWindow window(sf::VideoMode(1200, 900), "Asteroids near Earth");
-    sf::CircleShape earth_shape(12);
-    earth_shape.setFillColor(sf::Color::Blue);
-    earth_shape.setOrigin(12, 12);
-
-    sf::CircleShape asteroid_shape(2);
-    asteroid_shape.setFillColor(sf::Color::White);
-    asteroid_shape.setOrigin(2, 2);
-
-    const double scale = 200.0 / 8e8;   // 200 px on 800 000 km
-    const sf::Vector2f center(600, 450);
-
-    sf::Clock clock;
-    float frame_delay = 0.05f;
-    size_t frame = 0;
-
-    auto& earth_track = tracks[-1];
-    if (earth_track.empty()) {
-        std::cerr << "No Earth trajectory (id=-1)\n";
-        return;
-    }
-
-    while (window.isOpen() && frame < max_frames) {
+    
+    std::cout << "Загружено " << times.size() << " кадров, " << tracks.size() << " объектов" << std::endl;
+    
+    // 2. Настройки окна
+    unsigned int screen_w = sf::VideoMode::getDesktopMode().width;
+    unsigned int screen_h = sf::VideoMode::getDesktopMode().height;
+    sf::RenderWindow window(sf::VideoMode(screen_w, screen_h), "Астероиды около Земли");
+    
+    sf::Vector2f center(screen_w / 2.0f, screen_h / 2.0f);
+    const double scale = 200.0 / 8e12; // 200 пикселей = 800 000 км
+    
+    size_t current_frame = 0;
+    sf::Clock animation_clock;
+    sf::Time delay = sf::milliseconds(50);
+    
+    // 3. Основной цикл
+    while (window.isOpen())
+    {
         sf::Event event;
-        while (window.pollEvent(event)) {
+        while (window.pollEvent(event))
+        {
             if (event.type == sf::Event::Closed)
                 window.close();
         }
-
-        if (clock.getElapsedTime().asSeconds() >= frame_delay) {
-            frame++;
-            if (frame >= max_frames) frame = max_frames - 1;
-            clock.restart();
+        
+        // Обновление кадра
+        if (animation_clock.getElapsedTime() >= delay)
+        {
+            current_frame = (current_frame + 1) % times.size();
+            animation_clock.restart();
         }
-
+        
+        // Позиция Земли (id = -1) в текущем кадре
+        Point earth_pos = {0.0, 0.0};
+        auto it = tracks.find(-1);
+        if (it != tracks.end() && current_frame < it->second.size())
+            earth_pos = it->second[current_frame];
+        
+        // Отрисовка
         window.clear(sf::Color::Black);
-        earth_shape.setPosition(center);
-        window.draw(earth_shape);
-
-        double earth_x = earth_track[frame].first;
-        double earth_y = earth_track[frame].second;
-
-        for (auto& [id, points] : tracks) {
-            if (id < 0) continue;
-            if (frame >= points.size()) continue;
-            double ax = points[frame].first;
-            double ay = points[frame].second;
-            double rx = ax - earth_x;
-            double ry = ay - earth_y;
-            sf::Vector2f screen(center.x + rx * scale, center.y + ry * scale);
-            asteroid_shape.setPosition(screen);
-            window.draw(asteroid_shape);
+        
+        // Солнце (жёлтый круг в центре)
+        sf::CircleShape sun(10);
+        sun.setOrigin(10, 10);
+        sun.setPosition(center);
+        sun.setFillColor(sf::Color::Yellow);
+        window.draw(sun);
+        
+        // Земля (синий круг тоже в центре)
+        sf::CircleShape earth(10);
+        earth.setOrigin(10, 10);
+        earth.setPosition(center);
+        earth.setFillColor(sf::Color::Blue);
+        window.draw(earth);
+        
+        // Астероиды (все, кроме Земли)
+        for (const auto& pair : tracks)
+        {
+            int obj_id = pair.first;
+            const auto& points = pair.second;
+            if (obj_id == -1) continue; // пропускаем Землю
+            if (current_frame >= points.size()) continue;
+            
+            Point ast = points[current_frame];
+            double dx = ast.x - earth_pos.x;
+            double dy = ast.y - earth_pos.y;
+            
+            float sx = center.x + float(dx * scale);
+            float sy = center.y + float(dy * scale);
+            
+            sf::CircleShape asteroid(2);
+            asteroid.setOrigin(2, 2);
+            asteroid.setPosition(sx, sy);
+            asteroid.setFillColor(sf::Color::White);
+            window.draw(asteroid);
         }
-
+        
         window.display();
     }
 }
