@@ -210,10 +210,10 @@ void SimulationEngine::save_trajectory(double t_days) {
         traj_open_ = true;
     }
     if (bodies_.size() > 3)
-        traj_file_ << t_days << ",-1," << bodies_[3]->getX() << "," << bodies_[3]->getY() << "\n";
+        traj_file_ << t_days << ",-1," << bodies_[3]->getX()/10e9 << "," << bodies_[3]->getY()/10e9 << "\n";
     for (const auto& ast : asteroids_) {
         if (ast.alive) {
-            traj_file_ << t_days << "," << ast.id << "," << ast.x << "," << ast.y << "\n";
+            traj_file_ << t_days << "," << ast.id << "," << ast.x/10e9 << "," << ast.y/10e9 << "\n";
         }
     }
 }
