@@ -1,5 +1,6 @@
-﻿#include "physics.h"
-
+﻿
+#include "physics.h"
+namespace Physics{
 const double Msun = 1.98847e30;
 const double G = 6.67430e-11;
 
@@ -81,3 +82,4 @@ Neptune::Neptune(double x, double y, double vx, double vy, double m) : Planet(m,
 Spacecraft::Spacecraft(double m, double x, double y, double vx, double vy) 
     : Cosmic_bodies(m, x, y, vx, vy) {}
 void Spacecraft::update(double dt, const Gravity_field& field) { Cosmic_bodies::update(dt, field); }
+}

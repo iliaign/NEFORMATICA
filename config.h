@@ -19,10 +19,10 @@ private:
     std::string impact_stats_file_ = "impact_stats.csv";
     std::string output_dir_ = ".";
     
-    // Флаги удаления планет
-    bool enable_venus_ = true;
-    bool enable_mars_ = true;
-    bool enable_jupiter_ = true;
+    // Флаги удаления планет (исправлено: remove_* вместо enable_*)
+    bool remove_venus_ = false;    // <--- ИСПРАВЛЕНО
+    bool remove_mars_ = false;     // <--- ИСПРАВЛЕНО
+    bool remove_jupiter_ = false;  // <--- ИСПРАВЛЕНО
         
     // Параметры астероидов
     int num_asteroids_ = 100;
@@ -54,11 +54,11 @@ public:
         if (data.contains("save_interval_hours")) save_interval_hours_ = data["save_interval_hours"];
         if (data.contains("output_file")) output_file_ = data["output_file"];
         if (data.contains("output_dir")) output_dir_ = data["output_dir"];
-        if (data.contains("remove_mars")) remove_mars_ = data["remove_mars"];
-        if (data.contains("remove_jupiter")) remove_jupiter_ = data["remove_jupiter"];
         if (data.contains("trajectories_file")) trajectories_file_ = data["trajectories_file"];
         if (data.contains("impact_stats_file")) impact_stats_file_ = data["impact_stats_file"];
         if (data.contains("remove_venus")) remove_venus_ = data["remove_venus"];
+        if (data.contains("remove_mars")) remove_mars_ = data["remove_mars"];
+        if (data.contains("remove_jupiter")) remove_jupiter_ = data["remove_jupiter"];
         if (data.contains("num_asteroids")) num_asteroids_ = data["num_asteroids"];
         if (data.contains("asteroid_speed_min")) asteroid_speed_min_ = data["asteroid_speed_min"];
         if (data.contains("asteroid_speed_max")) asteroid_speed_max_ = data["asteroid_speed_max"];
@@ -71,9 +71,11 @@ public:
         data["save_interval_hours"] = save_interval_hours_;
         data["output_file"] = output_file_;
         data["output_dir"] = output_dir_;
+        data["trajectories_file"] = trajectories_file_;
+        data["impact_stats_file"] = impact_stats_file_;
+        data["remove_venus"] = remove_venus_;
         data["remove_mars"] = remove_mars_;
         data["remove_jupiter"] = remove_jupiter_;
-        data["remove_venus"] = remove_venus_;
         data["num_asteroids"] = num_asteroids_;
         data["asteroid_speed_min"] = asteroid_speed_min_;
         data["asteroid_speed_max"] = asteroid_speed_max_;
@@ -88,38 +90,31 @@ public:
     int save_interval_hours() const { return save_interval_hours_; }
     std::string output_file() const { return output_file_; }
     std::string output_dir() const { return output_dir_; }
-    bool remove_mars() const { return remove_mars_; }
-    bool remove_jupiter() const { return remove_jupiter_; }
     std::string trajectories_file() const { return trajectories_file_; }
     std::string impact_stats_file() const { return impact_stats_file_; }
     bool remove_venus() const { return remove_venus_; }
+    bool remove_mars() const { return remove_mars_; }
+    bool remove_jupiter() const { return remove_jupiter_; }
     int num_asteroids() const { return num_asteroids_; }
     double asteroid_speed_min() const { return asteroid_speed_min_; }
     double asteroid_speed_max() const { return asteroid_speed_max_; }
     
-    void set_enable_venus(bool b) { enable_venus_ = b; }
-    void set_enable_mars(bool b) { enable_mars_ = b; }
-    void set_enable_jupiter(bool b) { enable_jupiter_ = b; }
-    // Сеттеры
+    // Сеттеры для планет
+    void set_remove_venus(bool b) { remove_venus_ = b; }
+    void set_remove_mars(bool b) { remove_mars_ = b; }
+    void set_remove_jupiter(bool b) { remove_jupiter_ = b; }
+    
+    // Сеттеры для симуляции
     void set_dt(double dt) { dt_ = dt; }
     void set_total_days(int days) { total_days_ = days; }
     void set_save_interval_hours(int hours) { save_interval_hours_ = hours; }
     void set_output_file(const std::string& path) { output_file_ = path; }
     void set_output_dir(const std::string& dir) { output_dir_ = dir; }
-    void set_remove_mars(bool b) { remove_mars_ = b; }
-    void set_remove_jupiter(bool b) { remove_jupiter_ = b; }
-    void set_remove_venus(bool b) { remove_venus_ = b; }
     void set_num_asteroids(int n) { num_asteroids_ = n; }
     void set_asteroid_speed_range(double vmin, double vmax) {
         asteroid_speed_min_ = vmin;
         asteroid_speed_max_ = vmax;
     }
-    bool enable_venus() const { return enable_venus_; }
-    bool enable_mars() const { return enable_mars_; }
-    bool enable_jupiter() const { return enable_jupiter_; }
-
 };
-
-
 
 #endif // CONFIG_H

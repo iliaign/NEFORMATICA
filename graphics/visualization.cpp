@@ -7,7 +7,8 @@
 #include <string>
 #include <map>
 #include <limits>
-#include "config.h"
+#include "visualization.h"
+
 
 using std::vector;
 using std::array;
@@ -312,9 +313,9 @@ void run_menu(ConfigManager& cfg) {
                                 button2[i].setFillColor(planet_selected[i] ? sf::Color::Green : sf::Color::White);
                                 
                                 switch (i) {
-                                    case 0: cfg_.set_enable_venus(planet_selected[i]); break;
-                                    case 1: cfg_.set_enable_mars(planet_selected[i]); break;
-                                    case 2: cfg_.set_enable_jupiter(planet_selected[i]); break;
+                                        case 0: cfg_.set_remove_venus(planet_selected[i]); break;
+                                        case 1: cfg_.set_remove_mars(planet_selected[i]); break;
+                                        case 2: cfg_.set_remove_jupiter(planet_selected[i]); break;
                                 }
                             }
                         }

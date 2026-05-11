@@ -12,6 +12,8 @@ using std::vector;
 using std::sqrt;
 using std::string;
 
+namespace  Physics {  
+
 extern const double Msun;
 extern const double G;
 
@@ -123,5 +125,5 @@ public:
     Spacecraft(double m, double x, double y, double vx, double vy);
     void update(double dt, const Gravity_field& field) override;
 };
-
+}
 #endif

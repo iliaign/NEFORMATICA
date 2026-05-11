@@ -10,10 +10,18 @@ set(SOURCES
     main.cpp
     engine/engine.cpp
     physics/physics.cpp
+    graphics/visualization.cpp
+    graphics/menu.cpp
 )
+
 add_executable(orbitsim ${SOURCES})
 
-target_include_directories(orbitsim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(orbitsim PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/physics
+    ${CMAKE_CURRENT_SOURCE_DIR}/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/graphics
+)
 
 target_link_libraries(orbitsim sfml-graphics sfml-window sfml-system)
 

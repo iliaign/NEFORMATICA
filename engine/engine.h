@@ -7,6 +7,8 @@
 #include <string>
 #include <fstream>
 
+using namespace Physics;  // <--- ДОБАВИТЬ ЭТУ СТРОКУ
+
 class SimulationEngine {
 public:
     SimulationEngine();
@@ -31,7 +33,7 @@ private:
     Gravity_field field_;
     double dt_, total_seconds_, save_interval_seconds_, current_time_;
     std::string output_dir_;
-    std::string output_file_;            // <-- добавлено
+    std::string output_file_;
     std::string trajectories_file_;
     std::string impact_stats_file_;
     

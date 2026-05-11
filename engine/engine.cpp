@@ -6,6 +6,8 @@
 #include <cassert>
 
 using namespace std;
+using namespace Physics;
+
 
 // Константы масс и радиусов планет
 const double M_earth  = 5.9722e24;
