@@ -243,12 +243,6 @@ void SimulationEngine::check_collisions() {
                 continue;
             }
         }
-        
-        // Дополнительно: проверка столкновения с Солнцем
-        if (dist < 6.957e8) {  // R_sun = 6.957e8 м
-            cout << "Asteroid " << ast.id << " removed: hit Sun" << endl;
-            ast.alive = false;  // Астероид упал на Солнце
-        }
     }
 }
 
