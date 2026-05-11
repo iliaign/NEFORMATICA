@@ -10,8 +10,6 @@ set(SOURCES
     main.cpp
     engine/engine.cpp
     physics/physics.cpp
-    graphics/menu.cpp
-    graphics/visualization.cpp
 )
 add_executable(orbitsim ${SOURCES})
 

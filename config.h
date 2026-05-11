@@ -20,10 +20,10 @@ private:
     std::string output_dir_ = ".";
     
     // Флаги удаления планет
-    bool remove_mars_ = false;
-    bool remove_jupiter_ = false;
-    bool remove_venus_ = false;
-    
+    bool enable_venus_ = true;
+    bool enable_mars_ = true;
+    bool enable_jupiter_ = true;
+        
     // Параметры астероидов
     int num_asteroids_ = 100;
     double asteroid_speed_min_ = 20000.0;   // м/с
@@ -97,6 +97,9 @@ public:
     double asteroid_speed_min() const { return asteroid_speed_min_; }
     double asteroid_speed_max() const { return asteroid_speed_max_; }
     
+    void set_enable_venus(bool b) { enable_venus_ = b; }
+    void set_enable_mars(bool b) { enable_mars_ = b; }
+    void set_enable_jupiter(bool b) { enable_jupiter_ = b; }
     // Сеттеры
     void set_dt(double dt) { dt_ = dt; }
     void set_total_days(int days) { total_days_ = days; }
@@ -111,6 +114,12 @@ public:
         asteroid_speed_min_ = vmin;
         asteroid_speed_max_ = vmax;
     }
+    bool enable_venus() const { return enable_venus_; }
+    bool enable_mars() const { return enable_mars_; }
+    bool enable_jupiter() const { return enable_jupiter_; }
+
 };
+
+
 
 #endif // CONFIG_H

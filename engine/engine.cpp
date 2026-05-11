@@ -62,11 +62,13 @@ SimulationEngine::SimulationEngine(const ConfigManager& cfg)
     cout << "  impact stats file = " << impact_stats_file_ << endl;
 }
 
+//десткутров класса симуляции
 SimulationEngine::~SimulationEngine() {
     for (auto body : bodies_) delete body;
     if (traj_open_) traj_file_.close();
 }
-
+//инициализация планет солнечной системы
+//геоцентричная орбита
 void SimulationEngine::init_planets() {
     // Солнце
     bodies_.push_back(new Sun());
@@ -95,13 +97,157 @@ void SimulationEngine::setup() {
     init_planets();
 }
 
-// --------------------------------------------------------------
-// Астероиды
-// --------------------------------------------------------------
+//инициализация астероидов
+//создаем определенное число штук
+//в заданом диапазоне скоростей
 void SimulationEngine::set_asteroid_params(int count, double vmin, double vmax) {
     num_asteroids_ = count;
     ast_vmin_ = vmin;
     ast_vmax_ = vmax;
+}
+
+
+
+//интегрирование элейра 2го порядка
+//Не вынесено в физику тк добавление астероидов уже надстройка над симуляцией
+//они не учавстуют в гравиттировании
+//(точечная масса)
+
+
+// Обновление астероидов с проверками
+void SimulationEngine::update_asteroids() {
+    const double MAX_SPEED = 3e12;        // скорость света - физический предел
+    const double MAX_DISTANCE = 1e14;    // 100 млрд км (~670 а.е.)
+    
+    for (auto& ast : asteroids_) {
+        if (!ast.alive) continue;
+        
+        // Проверка на NaN/Inf в координатах
+        if (!isfinite(ast.x) || !isfinite(ast.y) || 
+            !isfinite(ast.vx) || !isfinite(ast.vy)) {
+            cout << "Asteroid " << ast.id << " removed: invalid state (NaN/Inf)" << endl;
+            ast.alive = false;
+            continue;
+        }
+        
+        // Проверка на вылет из солнечной системы
+        double dist_from_sun = hypot(ast.x, ast.y);
+        if (dist_from_sun > MAX_DISTANCE) {
+            cout << "Asteroid " << ast.id << " removed: escaped solar system (distance = " << dist_from_sun/1e9 << " million km)" << endl;
+            ast.alive = false;
+            continue;
+        }
+        
+        // Вычисляем гравитационное поле
+        Gravity_field::Point g = field_.calculating_field(ast.x, ast.y);
+        
+        // Проверка на NaN в гравитации
+        if (!isfinite(g.gx) || !isfinite(g.gy)) {
+            cout << "Asteroid " << ast.id << " removed: invalid gravity field" << endl;
+            ast.alive = false;
+            continue;
+        }
+        
+        // Обновляем скорость и позицию (Эйлер 2-го порядка)
+        ast.vx += g.gx * dt_;
+        ast.vy += g.gy * dt_;
+        
+        // Проверка на превышение скорости
+        double speed = hypot(ast.vx, ast.vy);
+        if (speed > MAX_SPEED || !isfinite(speed)) {
+            cout << "Asteroid " << ast.id << " removed: exceeded max speed (speed = " << speed << " m/s)" << endl;
+            ast.alive = false;
+            continue;
+        }
+        
+        ast.x += ast.vx * dt_;
+        ast.y += ast.vy * dt_;
+    }
+}
+
+// Проверка столкновений с планетами
+void SimulationEngine::check_collisions() {
+    // Ищем индексы планет по массе (с относительным допуском)
+    int earth_idx = -1, mars_idx = -1, jupiter_idx = -1, venus_idx = -1;
+    const double rel_eps = 1e-3;  // 0.1% допуск
+    
+    for (size_t i = 0; i < bodies_.size(); ++i) {
+        double m = bodies_[i]->getMass();
+        
+        if (abs(m - M_earth) < rel_eps * M_earth)
+            earth_idx = i;
+        else if (abs(m - M_mars) < rel_eps * M_mars)
+            mars_idx = i;
+        else if (abs(m - M_jupiter) < rel_eps * M_jupiter)
+            jupiter_idx = i;
+        else if (abs(m - M_venus) < rel_eps * M_venus)
+            venus_idx = i;
+    }
+    
+    if (earth_idx == -1) {
+        cerr << "ERROR: Earth not found in bodies!" << endl;
+        return;
+    }
+    
+    // Проверяем каждый астероид
+    for (auto& ast : asteroids_) {
+        if (!ast.alive) continue;
+        
+        double dx, dy, dist;
+        
+        // Проверка столкновения с Землёй
+        dx = ast.x - bodies_[earth_idx]->getX();
+        dy = ast.y - bodies_[earth_idx]->getY();
+        dist = hypot(dx, dy);
+        if (dist < 2*R_earth) {
+            impact_stats_.hits_earth++;
+            cout << "Asteroid " << ast.id << " removed: hit Earth" << endl;
+            ast.alive = false;
+            continue;
+        }
+        
+        // Проверка Марса (если найден)
+        if (mars_idx != -1) {
+            dx = ast.x - bodies_[mars_idx]->getX();
+            dy = ast.y - bodies_[mars_idx]->getY();
+            if (hypot(dx, dy) < R_mars) {
+                impact_stats_.hits_mars++;
+                cout << "Asteroid " << ast.id << " removed: hit Mars" << endl;
+                ast.alive = false;
+                continue;
+            }
+        }
+        
+        // Проверка Юпитера (если найден)
+        if (jupiter_idx != -1) {
+            dx = ast.x - bodies_[jupiter_idx]->getX();
+            dy = ast.y - bodies_[jupiter_idx]->getY();
+            if (hypot(dx, dy) < R_jupiter) {
+                impact_stats_.hits_jupiter++;
+                cout << "Asteroid " << ast.id << " removed: hit Jupiter" << endl;
+                ast.alive = false;
+                continue;
+            }
+        }
+        
+        // Проверка Венеры (если найдена)
+        if (venus_idx != -1) {
+            dx = ast.x - bodies_[venus_idx]->getX();
+            dy = ast.y - bodies_[venus_idx]->getY();
+            if (hypot(dx, dy) < R_venus) {
+                impact_stats_.hits_venus++;
+                cout << "Asteroid " << ast.id << " removed: hit Venus" << endl;
+                ast.alive = false;
+                continue;
+            }
+        }
+        
+        // Дополнительно: проверка столкновения с Солнцем
+        if (dist < 6.957e8) {  // R_sun = 6.957e8 м
+            cout << "Asteroid " << ast.id << " removed: hit Sun" << endl;
+            ast.alive = false;  // Астероид упал на Солнце
+        }
+    }
 }
 
 void SimulationEngine::generate_asteroids() {
@@ -109,94 +255,53 @@ void SimulationEngine::generate_asteroids() {
         cerr << "Ошибка: Земля ещё не создана. Вызовите setup() сначала." << endl;
         return;
     }
+    
     double earth_x = bodies_[3]->getX();
     double earth_y = bodies_[3]->getY();
     double earth_vx = bodies_[3]->getVx();
     double earth_vy = bodies_[3]->getVy();
     
+    // Инициализация генератора случайных чисел
     mt19937 gen(chrono::steady_clock::now().time_since_epoch().count());
-    uniform_real_distribution<> angle_dist(0, 2 * M_PI);
-    //подгружаем с файла минимальную и максимальную скорость
-    uniform_real_distribution<> vel_dist(ast_vmin_, ast_vmax_);
-    uniform_real_distribution<> rad_dist(3.844e8, 4.0e9);
+    uniform_real_distribution<> angle_dist(0.0, 2.0 * M_PI);
+    uniform_real_distribution<> vel_angle_dist(0.0, 2.0 * M_PI);
+    uniform_real_distribution<> vel_mag_dist(ast_vmin_, ast_vmax_);
+    uniform_real_distribution<> rad_dist(1.0e8, 5.0e8);  
     
     asteroids_.clear();
-    //клво тоже подгружаем
     asteroids_.reserve(num_asteroids_);
-    for (int i = 0; i < num_asteroids_; ++i) {
-        double angle = angle_dist(gen);
-        double r = rad_dist(gen);
-        double dx = r * cos(angle);
-        double dy = r * sin(angle);
-        double vx = earth_vx + vel_dist(gen);
-        double vy = earth_vy + vel_dist(gen);
-        asteroids_.push_back({1e12, earth_x + dx, earth_y + dy, vx, vy, true, i});
-    }
-    cout << "Сгенерировано астероидов: " << num_asteroids_ << endl;
-}
-
-void SimulationEngine::update_asteroids() {
-    for (auto& ast : asteroids_) {
-        if (!ast.alive) continue;
-        Gravity_field::Point g = field_.calculating_field(ast.x, ast.y);
-        ast.vx += g.gx * dt_;
-        ast.vy += g.gy * dt_;
-        ast.x += ast.vx * dt_;
-        ast.y += ast.vy * dt_;
-    }
-}
-
-void SimulationEngine::check_collisions() {
-    int earth_idx = -1, mars_idx = -1, jupiter_idx = -1, venus_idx = -1;
-    for (size_t i = 0; i < bodies_.size(); ++i) {
-        double m = bodies_[i]->getMass();
-        if (m == M_earth) earth_idx = i;
-        else if (m == M_mars) mars_idx = i;
-        else if (m == M_jupiter) jupiter_idx = i;
-        else if (m == M_venus) venus_idx = i;
-    }
-    if (earth_idx == -1) return;
     
-    for (auto& ast : asteroids_) {
-        if (!ast.alive) continue;
-        double dx, dy;
-        dx = ast.x - bodies_[earth_idx]->getX();
-        dy = ast.y - bodies_[earth_idx]->getY();
-        if (hypot(dx, dy) < R_earth) {
-            impact_stats_.hits_earth++;
-            ast.alive = false;
-            continue;
-        }
-        if (mars_idx != -1) {
-            dx = ast.x - bodies_[mars_idx]->getX();
-            dy = ast.y - bodies_[mars_idx]->getY();
-            if (hypot(dx, dy) < R_mars) {
-                impact_stats_.hits_mars++;
-                ast.alive = false;
-                continue;
-            }
-        }
-        if (jupiter_idx != -1) {
-            dx = ast.x - bodies_[jupiter_idx]->getX();
-            dy = ast.y - bodies_[jupiter_idx]->getY();
-            if (hypot(dx, dy) < R_jupiter) {
-                impact_stats_.hits_jupiter++;
-                ast.alive = false;
-                continue;
-            }
-        }
-        if (venus_idx != -1) {
-            dx = ast.x - bodies_[venus_idx]->getX();
-            dy = ast.y - bodies_[venus_idx]->getY();
-            if (hypot(dx, dy) < R_venus) {
-                impact_stats_.hits_venus++;
-                ast.alive = false;
-                continue;
-            }
-        }
+    for (int i = 0; i < num_asteroids_; ++i) {
+        // Случайная позиция вокруг Земли
+        double theta = angle_dist(gen);
+        double r = rad_dist(gen);
+        double dx = r * cos(theta);
+        double dy = r * sin(theta);
+        
+        // Случайное направление скорости
+        double vel_angle = vel_angle_dist(gen);
+        double vel_mag = vel_mag_dist(gen);
+        double v_rel_x = vel_mag * cos(vel_angle);
+        double v_rel_y = vel_mag * sin(vel_angle);
+        
+        // Итоговая скорость = скорость Земли + относительная
+        double vx = v_rel_x;
+        double vy = v_rel_y;
+        
+        asteroids_.push_back({
+            1e12,                        // масса
+            earth_x + dx,                // x
+            earth_y + dy,                // y
+            vx,                          // vx
+            vy,                          // vy
+            true,                        // alive
+            i                            // id
+        });
     }
+    
+    cout << "Сгенерировано " << num_asteroids_ << " астероидов" << endl;
+    cout << "  Скорости: " << ast_vmin_ << " - " << ast_vmax_ << " м/с" << endl;
 }
-
 // Сохранение результатов
 void SimulationEngine::save_trajectory(double t_days) {
     if (!traj_open_) {
@@ -210,7 +315,7 @@ void SimulationEngine::save_trajectory(double t_days) {
         traj_open_ = true;
     }
     if (bodies_.size() > 3)
-        traj_file_ << t_days << ",-1," << bodies_[3]->getX()/10e9 << "," << bodies_[3]->getY()/10e9 << "\n";
+        traj_file_ << t_days << ",-1," << bodies_[3]->getX()/10e9 << "," << bodies_[3]->getY()/10e9  << "\n";
     for (const auto& ast : asteroids_) {
         if (ast.alive) {
             traj_file_ << t_days << "," << ast.id << "," << ast.x/10e9 << "," << ast.y/10e9 << "\n";
